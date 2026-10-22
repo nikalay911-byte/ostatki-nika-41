@@ -74,13 +74,25 @@ NOTES
 )" || echo "не удалось создать релиз (возможно, тег уже выпущен) — код и тег на месте"
   fi
 
-  if [ "$PAGES" = "1" ]; then
-    say "GitHub Pages (публичный репозиторий) — страница прайса по постоянному URL"
+  say "GitHub Pages — страница прайса по постоянному URL"
+  OWNER=$(echo "$OWNER_REPO" | cut -d/ -f1 | tr 'A-Z' 'a-z')
+  NAME=$(basename "$OWNER_REPO")
+  PAGES_URL="https://$OWNER.github.io/$NAME/app/index.html"
+  if [ "$PAGES" = "legacy" ]; then
+    # вариант «деплой из ветки» (без workflow); строчка пути = корень репозитория
     run gh api -X POST "repos/$OWNER_REPO/pages" \
-      --input <(printf '{"source":{"branch":"%s","path":"/"},"build_type":"legacy"}' "$DST_BRANCH") 2>/dev/null \
+      --input <(printf '{"source":{"branch":"%s","path":"/"},"build_type":"legacy"}' "$DST_BRANCH") \
       || run gh api -X PUT "repos/$OWNER_REPO/pages" -f "source[branch]=$DST_BRANCH" -f "source[path]=/" || true
-    echo "URL: https://$(echo "$OWNER_REPO" | tr 'A-Z' 'a-z' | cut -d/ -f1).github.io/$(basename "$OWNER_REPO")/app/index.html"
+  else
+    # вариант «деплой через GitHub Actions» — совпадает с .github/workflows/pages.yml
+    run gh api -X POST "repos/$OWNER_REPO/pages" -f build_type=workflow \
+      || run gh api -X PUT "repos/$OWNER_REPO/pages" -f build_type=workflow || true
+    run gh workflow run pages.yml --repo "$OWNER_REPO" --ref "$DST_BRANCH" || true
   fi
+  run gh repo edit "$OWNER_REPO" --homepage "$PAGES_URL" || true
+  echo "Pages: $PAGES_URL  (лендинг: https://$OWNER.github.io/$NAME/)"
+  echo "Домен может появиться не сразу: gh api repos/$OWNER_REPO/pages --jq .status"
+
 else
   echo "\ngh не найден — описание/релиз/Pages надо настроить вручную (код и тег уже запушены)." >&2
 fi
