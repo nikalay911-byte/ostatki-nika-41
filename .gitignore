@@ -6,6 +6,7 @@ Thumbs.db
 .idea/
 .vscode/
 *.zip
+!release/*.zip
 *.crx
 *.pem
 .cache/
