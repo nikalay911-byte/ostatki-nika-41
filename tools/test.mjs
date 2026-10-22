@@ -446,5 +446,10 @@ await t('перф: 20 000 строк фильтруются за один кад
   app.state.q = ''; app.state.query = w.OST.search.parseQuery(''); app.refresh();
 });
   console.log('\n' + (fail ? 'ПРОВАЛЫ:\n' + fails.join('\n') : '') + `итого: ${pass} ок, ${fail} фейлов`);
+  if (fail && process.env.GITHUB_ACTIONS) {
+    // логи Actions могут быть недоступны — роняем причины в аннотации (видно через API и в UI)
+    for (const f of fails) console.log(`::error title=тест упал::${f}`);
+    console.log(`::error title=итог::${fail} из ${pass + fail} проверок не прошли`);
+  }
   process.exit(fail ? 1 : 0);
 })();
