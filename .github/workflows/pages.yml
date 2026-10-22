@@ -1,9 +1,16 @@
-name: GitHub Pages (веб-версия страницы прайса)
+# Веб-версия страницы прайса (лендинг + /app/index.html) на GitHub Pages.
+# Работает только в целевом репозитории проекта с включённым Pages — в других местах
+# (например, в рабочей ветке-переноске) job просто скипается, чтобы не светить красный крест.
+name: GitHub Pages
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,17 +19,23 @@ permissions:
 
 jobs:
   build:
+    if: github.repository == 'nikalay911-byte/ostatki-nika-41'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
-        with: { generate: false }
+        with:
+          generate: false
       - uses: actions/upload-pages-artifact@v3
-        with: { path: "." }
+        with:
+          path: "."
   deploy:
     needs: build
+    if: github.repository == 'nikalay911-byte/ostatki-nika-41' && needs.build.result == 'success'
     runs-on: ubuntu-latest
-    environment: { name: github-pages, url: ${{ steps.deployment.outputs.page_url }} }
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
